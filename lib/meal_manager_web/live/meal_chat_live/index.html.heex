@@ -1,0 +1,25 @@
+<main id="meal-chat" phx-hook="BrowserTimezone">
+  <div class="py-4 border-b border-t border-gray-200 xl:pt-6 xl:border-t-0">
+    <div class="flex items-center">
+      <h1 class="flex-1 text-lg font-medium">Chat with personal meal manager</h1>
+    </div>
+  </div>
+
+
+  <div>
+    <.simple_form for={@form} id="new-message-form" phx-change="validate" phx-submit="save">
+      <.input
+        field={@form[:content]}
+        id="new-message-content"
+        type="textarea"
+        rows={8}
+        label="Send Message"
+        phx-debounce="500"
+        phx-hook="CtrlEnterSubmits"
+      />
+      <:actions>
+        <.button phx-disable-with="Submiting...">Submit</.button>
+      </:actions>
+    </.simple_form>
+  </div>
+</main>
