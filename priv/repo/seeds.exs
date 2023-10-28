@@ -1,11 +1,17 @@
-# Script for populating the database. You can run it as:
-#
-#     mix run priv/repo/seeds.exs
-#
-# Inside the script, you can read and write to any of your
-# repositories directly:
-#
-#     MealManager.Repo.insert!(%MealManager.SomeSchema{})
-#
-# We recommend using the bang functions (`insert!`, `update!`
-# and so on) as they will fail if something goes wrong.
+alias MealManager.Diners
+alias MealManager.Diners.Diner
+
+defmodule Seeds.CreateDiner do
+  def get_or_create_user(id, %{} = attrs) do
+    case Diners.get_diner(id) do
+      %Diner{} = diner ->
+        diner
+
+      nil ->
+        {:ok, diner} = Diners.create_diner(attrs)
+        diner
+    end
+  end
+end
+
+Seeds.CreateDiner.get_or_create_user(1, %{})

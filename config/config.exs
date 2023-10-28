@@ -9,7 +9,7 @@ import Config
 
 config :meal_manager,
   ecto_repos: [MealManager.Repo],
-  generators: [binary_id: true]
+  generators: [binary_id: false, timestamp_type: :utc_datetime_usec]
 
 # Configures the endpoint
 config :meal_manager, MealManagerWeb.Endpoint,
