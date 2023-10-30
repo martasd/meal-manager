@@ -44,6 +44,8 @@ defmodule MealManager.MixProject do
       {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:langchain, "~> 0.1.2"},
+      {:earmark, "~> 1.4"},
+      {:tzdata, "~> 1.1"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},

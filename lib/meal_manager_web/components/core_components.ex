@@ -36,12 +36,27 @@ defmodule MealManagerWeb.CoreComponents do
       </.modal>
 
   """
-  attr :id, :string, required: true
-  attr :show, :boolean, default: false
-  attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
+  attr(:id, :string, required: true)
+  attr(:show, :boolean, default: false)
+
+  attr(:on_click_away, :atom,
+    default: :close,
+    doc:
+      "The behavior to perform when a mouse click happens outside the modal. Defaults to close. Set to `:none` to keep open"
+  )
+
+  attr(:on_cancel, JS, default: %JS{})
+  slot(:inner_block, required: true)
 
   def modal(assigns) do
+    click_away =
+      case assigns.on_click_away do
+        :close -> JS.exec("data-cancel", to: "##{assigns.id}")
+        _other_or_none -> %JS{}
+      end
+
+    assigns = assign(assigns, :click_away, click_away)
+
     ~H"""
     <div
       id={@id}
@@ -50,7 +65,11 @@ defmodule MealManagerWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div
+        id={"#{@id}-bg"}
+        class="bg-gray-500/90 fixed inset-0 transition-opacity"
+        aria-hidden="true"
+      />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -60,13 +79,13 @@ defmodule MealManagerWeb.CoreComponents do
         tabindex="0"
       >
         <div class="flex min-h-full items-center justify-center">
-          <div class="w-full max-w-3xl p-4 sm:p-6 lg:py-8">
+          <div class="w-full max-w-3xl p-4 sm:p-4">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
-              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
+              phx-click-away={@click_away}
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-4 shadow-lg ring-1 transition"
             >
               <div class="absolute top-6 right-5">
                 <button
@@ -97,13 +116,13 @@ defmodule MealManagerWeb.CoreComponents do
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:info} phx-mounted={show("#flash")}>Welcome Back!</.flash>
   """
-  attr :id, :string, default: "flash", doc: "the optional id of flash container"
-  attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
-  attr :title, :string, default: nil
-  attr :kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup"
-  attr :rest, :global, doc: "the arbitrary HTML attributes to add to the flash container"
+  attr(:id, :string, default: "flash", doc: "the optional id of flash container")
+  attr(:flash, :map, default: %{}, doc: "the map of flash messages to display")
+  attr(:title, :string, default: nil)
+  attr(:kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup")
+  attr(:rest, :global, doc: "the arbitrary HTML attributes to add to the flash container")
 
-  slot :inner_block, doc: "the optional inner block that renders the flash message"
+  slot(:inner_block, doc: "the optional inner block that renders the flash message")
 
   def flash(assigns) do
     ~H"""
@@ -139,7 +158,7 @@ defmodule MealManagerWeb.CoreComponents do
 
       <.flash_group flash={@flash} />
   """
-  attr :flash, :map, required: true, doc: "the map of flash messages"
+  attr(:flash, :map, required: true, doc: "the map of flash messages")
 
   def flash_group(assigns) do
     ~H"""
@@ -171,20 +190,21 @@ defmodule MealManagerWeb.CoreComponents do
         </:actions>
       </.simple_form>
   """
-  attr :for, :any, required: true, doc: "the datastructure for the form"
-  attr :as, :any, default: nil, doc: "the server side parameter to collect all input under"
+  attr(:for, :any, required: true, doc: "the datastructure for the form")
+  attr(:as, :any, default: nil, doc: "the server side parameter to collect all input under")
 
-  attr :rest, :global,
+  attr(:rest, :global,
     include: ~w(autocomplete name rel action enctype method novalidate target),
     doc: "the arbitrary HTML attributes to apply to the form tag"
+  )
 
-  slot :inner_block, required: true
-  slot :actions, doc: "the slot for form actions, such as a submit button"
+  slot(:inner_block, required: true)
+  slot(:actions, doc: "the slot for form actions, such as a submit button")
 
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 bg-white">
+      <div class="space-y-8">
         <%= render_slot(@inner_block, f) %>
         <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
           <%= render_slot(action, f) %>
@@ -202,11 +222,11 @@ defmodule MealManagerWeb.CoreComponents do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
-  attr :type, :string, default: nil
-  attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr(:type, :string, default: nil)
+  attr(:class, :string, default: nil)
+  attr(:rest, :global, include: ~w(disabled form name value))
 
-  slot :inner_block, required: true
+  slot(:inner_block, required: true)
 
   def button(assigns) do
     ~H"""
@@ -236,30 +256,35 @@ defmodule MealManagerWeb.CoreComponents do
       <.input field={@form[:email]} type="email" />
       <.input name="my-input" errors={["oh no!"]} />
   """
-  attr :id, :any, default: nil
-  attr :name, :any
-  attr :label, :string, default: nil
-  attr :value, :any
+  attr(:id, :any, default: nil)
+  attr(:name, :any)
+  attr(:label, :string, default: nil)
+  attr(:value, :any)
 
-  attr :type, :string,
+  attr(:type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file hidden month number password
                range radio search select tel text textarea time url week)
+  )
 
-  attr :field, Phoenix.HTML.FormField,
+  attr(:field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  )
 
-  attr :errors, :list, default: []
-  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
-  attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
-  attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
-  attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
+  attr(:help, :string, default: nil)
+  attr(:errors, :list, default: [])
+  attr(:required, :boolean, default: false)
+  attr(:checked, :boolean, doc: "the checked flag for checkbox inputs")
+  attr(:prompt, :string, default: nil, doc: "the prompt for select inputs")
+  attr(:options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2")
+  attr(:multiple, :boolean, default: false, doc: "the multiple flag for select inputs")
 
-  attr :rest, :global,
+  attr(:rest, :global,
     include: ~w(autocomplete cols disabled form list max maxlength min minlength
-                pattern placeholder readonly required rows size step)
+                pattern placeholder readonly required rows size step ticks)
+  )
 
-  slot :inner_block
+  slot(:inner_block)
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
@@ -309,6 +334,7 @@ defmodule MealManagerWeb.CoreComponents do
         <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
       </select>
       <.error :for={msg <- @errors}><%= msg %></.error>
+      <.help :if={@help} text={@help} class="mt-1" />
     </div>
     """
   end
@@ -329,6 +355,46 @@ defmodule MealManagerWeb.CoreComponents do
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
       <.error :for={msg <- @errors}><%= msg %></.error>
+      <.help :if={@help} text={@help} class="mt-2" />
+    </div>
+    """
+  end
+
+  def input(%{type: "range"} = assigns) do
+    {local, rest} = Map.split(assigns.rest, [:min, :max, :step, :ticks])
+
+    assigns =
+      assigns
+      |> assign(:min, Map.get(local, :min, 0))
+      |> assign(:max, Map.get(local, :max, 9))
+      |> assign(:step, Map.get(local, :step, 1))
+      |> assign(:ticks, Map.get(local, :ticks, false))
+      |> assign(:rest, rest)
+
+    ~H"""
+    <div phx-feedback-for={@name} class="text-sm">
+      <.label :if={@label} for={@id} required={@required}><%= @label %></.label>
+      <div class="mx-auto w-full">
+        <input
+          id={@id}
+          class="w-full cursor-pointer rounded-full accent-rose-500"
+          {@rest}
+          type="range"
+          name={@name}
+          min={@min}
+          max={@max}
+          step={@step}
+          value={@value}
+          list={"#{@id}-values"}
+        />
+        <%= if @ticks do %>
+          <datalist id={"#{@id}-values"}>
+            <option :for={tick_val <- @min..@max//@step} value={tick_val} label={tick_val}></option>
+          </datalist>
+        <% end %>
+      </div>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.help :if={@help} text={@help} class="mt-2" />
     </div>
     """
   end
@@ -352,6 +418,7 @@ defmodule MealManagerWeb.CoreComponents do
         {@rest}
       />
       <.error :for={msg <- @errors}><%= msg %></.error>
+      <.help :if={@help} text={@help} class="mt-1" />
     </div>
     """
   end
@@ -359,13 +426,15 @@ defmodule MealManagerWeb.CoreComponents do
   @doc """
   Renders a label.
   """
-  attr :for, :string, default: nil
-  slot :inner_block, required: true
+  attr(:for, :string, default: nil)
+  attr(:required, :boolean, default: false)
+  slot(:inner_block, required: true)
 
   def label(assigns) do
     ~H"""
     <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
       <%= render_slot(@inner_block) %>
+      <%= if @required, do: " *", else: "" %>
     </label>
     """
   end
@@ -373,7 +442,7 @@ defmodule MealManagerWeb.CoreComponents do
   @doc """
   Generates a generic error message.
   """
-  slot :inner_block, required: true
+  slot(:inner_block, required: true)
 
   def error(assigns) do
     ~H"""
@@ -385,13 +454,25 @@ defmodule MealManagerWeb.CoreComponents do
   end
 
   @doc """
+  Generates a generic input help text message.
+  """
+  attr(:text, :string, required: true)
+  attr(:class, :string, default: nil)
+
+  def help(assigns) do
+    ~H"""
+    <p class={["text-gray-500", @class]}><%= @text %></p>
+    """
+  end
+
+  @doc """
   Renders a header with title.
   """
-  attr :class, :string, default: nil
+  attr(:class, :string, default: nil)
 
-  slot :inner_block, required: true
-  slot :subtitle
-  slot :actions
+  slot(:inner_block, required: true)
+  slot(:subtitle)
+  slot(:actions)
 
   def header(assigns) do
     ~H"""
@@ -419,20 +500,21 @@ defmodule MealManagerWeb.CoreComponents do
         <:col :let={user} label="username"><%= user.username %></:col>
       </.table>
   """
-  attr :id, :string, required: true
-  attr :rows, :list, required: true
-  attr :row_id, :any, default: nil, doc: "the function for generating the row id"
-  attr :row_click, :any, default: nil, doc: "the function for handling phx-click on each row"
+  attr(:id, :string, required: true)
+  attr(:rows, :list, required: true)
+  attr(:row_id, :any, default: nil, doc: "the function for generating the row id")
+  attr(:row_click, :any, default: nil, doc: "the function for handling phx-click on each row")
 
-  attr :row_item, :any,
+  attr(:row_item, :any,
     default: &Function.identity/1,
     doc: "the function for mapping each row before calling the :col and :action slots"
+  )
 
   slot :col, required: true do
-    attr :label, :string
+    attr(:label, :string)
   end
 
-  slot :action, doc: "the slot for showing user actions in the last table column"
+  slot(:action, doc: "the slot for showing user actions in the last table column")
 
   def table(assigns) do
     assigns =
@@ -496,7 +578,7 @@ defmodule MealManagerWeb.CoreComponents do
       </.list>
   """
   slot :item, required: true do
-    attr :title, :string, required: true
+    attr(:title, :string, required: true)
   end
 
   def list(assigns) do
@@ -519,12 +601,13 @@ defmodule MealManagerWeb.CoreComponents do
 
       <.back navigate={~p"/posts"}>Back to posts</.back>
   """
-  attr :navigate, :any, required: true
-  slot :inner_block, required: true
+  attr(:navigate, :any, required: true)
+  attr(:class, :string, default: nil)
+  slot(:inner_block, required: true)
 
   def back(assigns) do
     ~H"""
-    <div class="mt-16">
+    <div class={@class}>
       <.link
         navigate={@navigate}
         class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
@@ -554,12 +637,43 @@ defmodule MealManagerWeb.CoreComponents do
       <.icon name="hero-x-mark-solid" />
       <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
   """
-  attr :name, :string, required: true
-  attr :class, :string, default: nil
+  attr(:name, :string, required: true)
+  attr(:class, :string, default: nil)
+  attr(:rest, :global)
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
+    """
+  end
+
+  def icon(%{name: "fa-user-robot"} = assigns) do
+    ~H"""
+    <span class="align-middle">
+      <svg xmlns="http://www.w3.org/2000/svg" class={@class} fill="currentColor" viewBox="0 0 448 512">
+        <path d="M17.99986,256H48V128H17.99986A17.9784,17.9784,0,0,0,0,146v92A17.97965,17.97965,0,0,0,17.99986,256Zm412-128H400V256h29.99985A17.97847,17.97847,0,0,0,448,238V146A17.97722,17.97722,0,0,0,429.99985,128ZM116,320H332a36.0356,36.0356,0,0,0,36-36V109a44.98411,44.98411,0,0,0-45-45H241.99985V18a18,18,0,1,0-36,0V64H125a44.98536,44.98536,0,0,0-45,45V284A36.03685,36.03685,0,0,0,116,320Zm188-48H272V240h32ZM288,128a32,32,0,1,1-32,32A31.99658,31.99658,0,0,1,288,128ZM208,240h32v32H208Zm-32,32H144V240h32ZM160,128a32,32,0,1,1-32,32A31.99658,31.99658,0,0,1,160,128ZM352,352H96A95.99975,95.99975,0,0,0,0,448v32a32.00033,32.00033,0,0,0,32,32h96V448a31.99908,31.99908,0,0,1,32-32H288a31.99908,31.99908,0,0,1,32,32v64h96a32.00033,32.00033,0,0,0,32-32V448A95.99975,95.99975,0,0,0,352,352ZM176,448a15.99954,15.99954,0,0,0-16,16v48h32V464A15.99954,15.99954,0,0,0,176,448Zm96,0a16,16,0,1,0,16,16A15.99954,15.99954,0,0,0,272,448Z" />
+      </svg>
+    </span>
+    """
+  end
+
+  def icon(%{name: "fa-function"} = assigns) do
+    ~H"""
+    <span class="align-middle">
+      <svg xmlns="http://www.w3.org/2000/svg" class={@class} fill="currentColor" viewBox="0 0 640 512">
+        <path d="M288.73 320c0-52.34 16.96-103.22 48.01-144.95 5.17-6.94 4.45-16.54-2.15-22.14l-24.69-20.98c-7-5.95-17.83-5.09-23.38 2.23C246.09 187.42 224 252.78 224 320c0 67.23 22.09 132.59 62.52 185.84 5.56 7.32 16.38 8.18 23.38 2.23l24.69-20.99c6.59-5.61 7.31-15.2 2.15-22.14-31.06-41.71-48.01-92.6-48.01-144.94zM224 16c0-8.84-7.16-16-16-16h-48C102.56 0 56 46.56 56 104v64H16c-8.84 0-16 7.16-16 16v48c0 8.84 7.16 16 16 16h40v128c0 13.2-10.8 24-24 24H16c-8.84 0-16 7.16-16 16v48c0 8.84 7.16 16 16 16h16c57.44 0 104-46.56 104-104V248h40c8.84 0 16-7.16 16-16v-48c0-8.84-7.16-16-16-16h-40v-64c0-13.2 10.8-24 24-24h48c8.84 0 16-7.16 16-16V16zm353.48 118.16c-5.56-7.32-16.38-8.18-23.38-2.23l-24.69 20.98c-6.59 5.61-7.31 15.2-2.15 22.14 31.05 41.71 48.01 92.61 48.01 144.95 0 52.34-16.96 103.23-48.01 144.95-5.17 6.94-4.45 16.54 2.15 22.14l24.69 20.99c7 5.95 17.83 5.09 23.38-2.23C617.91 452.57 640 387.22 640 320c0-67.23-22.09-132.59-62.52-185.84zm-54.17 231.9L477.25 320l46.06-46.06c6.25-6.25 6.25-16.38 0-22.63l-22.62-22.62c-6.25-6.25-16.38-6.25-22.63 0L432 274.75l-46.06-46.06c-6.25-6.25-16.38-6.25-22.63 0l-22.62 22.62c-6.25 6.25-6.25 16.38 0 22.63L386.75 320l-46.06 46.06c-6.25 6.25-6.25 16.38 0 22.63l22.62 22.62c6.25 6.25 16.38 6.25 22.63 0L432 365.25l46.06 46.06c6.25 6.25 16.38 6.25 22.63 0l22.62-22.62c6.25-6.25 6.25-16.38 0-22.63z" />
+      </svg>
+    </span>
+    """
+  end
+
+  def icon(%{name: "fa-code-branch"} = assigns) do
+    ~H"""
+    <span class="align-middle">
+      <svg xmlns="http://www.w3.org/2000/svg" class={@class} fill="currentColor" viewBox="0 0 384 512">
+        <path d="M384 144c0-44.2-35.8-80-80-80s-80 35.8-80 80c0 36.4 24.3 67.1 57.5 76.8-.6 16.1-4.2 28.5-11 36.9-15.4 19.2-49.3 22.4-85.2 25.7-28.2 2.6-57.4 5.4-81.3 16.9v-144c32.5-10.2 56-40.5 56-76.3 0-44.2-35.8-80-80-80S0 35.8 0 80c0 35.8 23.5 66.1 56 76.3v199.3C23.5 365.9 0 396.2 0 432c0 44.2 35.8 80 80 80s80-35.8 80-80c0-34-21.2-63.1-51.2-74.6 3.1-5.2 7.8-9.8 14.9-13.4 16.2-8.2 40.4-10.4 66.1-12.8 42.2-3.9 90-8.4 118.2-43.4 14-17.4 21.1-39.8 21.6-67.9 31.6-10.8 54.4-40.7 54.4-75.9zM80 64c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16zm0 384c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm224-320c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16z" />
+      </svg>
+    </span>
     """
   end
 
@@ -611,6 +725,14 @@ defmodule MealManagerWeb.CoreComponents do
   end
 
   @doc """
+  Cancel a modal using the ID. Triggers the `on_cancel` JS command.
+  """
+  def cancel_modal(js \\ %JS{}, id) do
+    js
+    |> JS.exec("data-cancel", to: "##{id}")
+  end
+
+  @doc """
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do
@@ -636,5 +758,77 @@ defmodule MealManagerWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  Render the raw content as markdown. Returns HTML rendered text.
+  """
+  def render_markdown(nil), do: Phoenix.HTML.raw(nil)
+
+  def render_markdown(text) when is_binary(text) do
+    # NOTE: This allows explicit HTML to come through.
+    #   - Don't allow this with user input.
+    text |> Earmark.as_html!(escape: false) |> Phoenix.HTML.raw()
+  end
+
+  @doc """
+  Render a markdown containing web component.
+  """
+  attr(:text, :string, required: true)
+  attr(:class, :string, default: nil)
+  attr(:rest, :global)
+
+  def markdown(%{text: nil} = assigns), do: ~H""
+
+  def markdown(assigns) do
+    ~H"""
+    <div class={["prose dark:prose-invert", @class]} {@rest}><%= render_markdown(@text) %></div>
+    """
+  end
+
+  slot(:title, required: true)
+  slot(:right)
+  slot(:links)
+  slot(:description)
+  slot(:inner_block, required: true)
+
+  @doc """
+  Section heading with title and description.
+  """
+  def section_heading(assigns) do
+    ~H"""
+    <div class="px-4 py-5 sm:px-6">
+      <div class="flex items-center">
+        <div class="flex-grow">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">
+            <%= for title <- @title do %>
+              <%= render_slot(title) %>
+            <% end %>
+          </h3>
+          <%= for description <- @description do %>
+            <p class="text-sm text-gray-500">
+              <div class="mt-1 max-w-2xl text-sm text-gray-500">
+                <%= render_slot(description) %>
+              </div>
+            </p>
+          <% end %>
+
+          <%= for inner_block <- @inner_block do %>
+            <div class="mt-1 max-w-2xl text-sm text-gray-500">
+              <%= render_slot(inner_block) %>
+            </div>
+          <% end %>
+        </div>
+        <%= for right <- @right do %>
+          <%= render_slot(right) %>
+        <% end %>
+      </div>
+      <%= for links <- @links do %>
+        <div class="mt-2 text-sm">
+          <%= render_slot(links) %>
+        </div>
+      <% end %>
+    </div>
+    """
   end
 end
