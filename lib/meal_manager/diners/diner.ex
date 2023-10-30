@@ -3,9 +3,10 @@ defmodule MealManager.Diners.Diner do
   import Ecto.Changeset
 
   schema "diners" do
-    field :name, :string
-    field :age, :integer
-    field :weight, :integer
+    field(:name, :string)
+    field(:age, :integer)
+    field(:weight, :integer)
+    field(:timezone, :string)
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -13,7 +14,7 @@ defmodule MealManager.Diners.Diner do
   @doc false
   def changeset(diner, attrs) do
     diner
-    |> cast(attrs, [:name, :age, :weight])
+    |> cast(attrs, [:name, :age, :weight, :timezone])
     |> validate_required([])
   end
 end
