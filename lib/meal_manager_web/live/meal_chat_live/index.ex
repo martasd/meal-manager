@@ -53,7 +53,7 @@ defmodule MealManagerWeb.MealChatLive.Index do
       case ChatMessage.new(params) do
         {:ok, %ChatMessage{} = message} ->
           socket
-          # |> add_user_message(message.content)
+          |> add_user_message(message.content)
           |> reset_chat_message_form()
           |> run_chain()
 
@@ -79,6 +79,29 @@ defmodule MealManagerWeb.MealChatLive.Index do
       end
 
     {:noreply, socket}
+  end
+
+  # Apply the delta to the LLMChain. If delta completes the message, display it.
+  @impl true
+  def handle_info({:chat_response, %LangChain.MessageDelta{} = delta}, socket) do
+    updated_chain = LLMChain.apply_delta(socket.assigns.llm_chain, delta)
+
+    # If delta completes the message, display the message.
+    socket =
+      if updated_chain.delta == nil do
+        case updated_chain.last_message do
+          %Message{role: role, content: content}
+          when role in [:user, :assistant] and is_binary(content) ->
+            append_display_message(socket, %ChatMessage{role: role, content: content})
+
+          _message_without_content ->
+            socket
+        end
+      else
+        socket
+      end
+
+    {:noreply, assign(socket, :llm_chain, updated_chain)}
   end
 
   # Handles async function returning a successful result.
@@ -109,9 +132,8 @@ defmodule MealManagerWeb.MealChatLive.Index do
     {:noreply, socket}
   end
 
-  # If this is the FIRST user message, use a prompt template to include some
-  # initial hidden instructions. We detect if it's the first by matching on the
-  # last_messaging being the "system" message.
+  # If this is the first user message, use a prompt template to include some initial hidden instructions. 
+  # Detect if it's the first by matching on the last_message being the "system" message.
   def add_user_message(
         %{assigns: %{llm_chain: %LLMChain{last_message: %Message{role: :system}} = llm_chain}} =
           socket,
@@ -124,25 +146,14 @@ defmodule MealManagerWeb.MealChatLive.Index do
     current_user_template = PromptTemplate.from_template!(~S|
 Today is <%= @today %>
 
-User's currently known account information in JSON format:
-<%= @current_user_json %>
-
-Do an accountability follow-up with me on my previous workouts. When no previous workout information is available, help me get started.
-
-Today's workout information in JSON format:
-<%= @current_workout_json %>
-
 User says:
 <%= @user_text %>|)
 
     updated_chain =
-      llm_chain
-      |> LLMChain.add_message(
+      LLMChain.add_message(
+        llm_chain,
         PromptTemplate.to_message!(current_user_template, %{
-          current_user_json: current_user |> Jason.encode!(),
-          current_workout_json:
-            FitnessLogs.list_fitness_logs(current_user.id, days: 0) |> Jason.encode!(),
-          today: today |> Calendar.strftime("%A, %Y-%m-%d"),
+          today: Calendar.strftime(today, "%A, %Y-%m-%d"),
           user_text: user_text
         })
       )
