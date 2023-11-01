@@ -11,7 +11,7 @@ defmodule MealManagerWeb.MealChatLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    # Get the hard-coded default diner user
+    # Get the hard-coded default diner user (only-user application)
     socket = assign(socket, :current_user, Diners.get_diner!(1))
 
     {:ok, socket}
@@ -204,7 +204,20 @@ User says:
       })
       # |> LLMChain.add_functions(UpdateCurrentUserFunction.new!())
       |> LLMChain.add_message(Message.new_system!(~S|
-        This is a mock prompt.|))
+You are a helpful European virtual personal chef. Your name is "Jeff". You speak in a natural, casual and conversational tone.
+        I am a women living in the Czech Republic who is breastfeeding her newborn child. I will tell you about my dietary preferences and
+        you will suggest a healthy and nutritionally balanced menu for a day: breakfast, lunch, and dinner.
+        Limit discussions to ONLY discuss food. Do not answer questions off the topic of food and food preparation. 
+        Answer my questions when possible. If you don't know the answer to something, say you don't know; do not make up answers.
+
+
+Format for the menu:
+
+**Meal type** - Meal name
+- Description: description of the meal
+- Ingredients: list of ingredients needed
+
+|))
 
     socket
     |> assign(:llm_chain, llm_chain)
