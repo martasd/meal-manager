@@ -8,6 +8,7 @@ defmodule MealManagerWeb.MealChatLive.Index do
   alias Phoenix.LiveView.AsyncResult
   alias MealManager.Diners
   alias MealManagerWeb.MealChatLive.ChatMessage
+  alias MealManagerWeb.MealChatLive.UpdateCurrentUserFunction
 
   @impl true
   def mount(_params, _session, socket) do
@@ -104,6 +105,25 @@ defmodule MealManagerWeb.MealChatLive.Index do
     {:noreply, assign(socket, :llm_chain, updated_chain)}
   end
 
+  def handle_info({:updated_current_user, updated_user}, socket) do
+    message = %ChatMessage{
+      role: :function_call,
+      hidden: false,
+      content: "Updated your information."
+    }
+
+    socket =
+      socket
+      |> assign(:current_user, updated_user)
+      |> assign(
+        :llm_chain,
+        LLMChain.update_custom_context(socket.assigns.llm_chain, %{current_user: updated_user})
+      )
+      |> append_display_message(message)
+
+    {:noreply, socket}
+  end
+
   # Handles async function returning a successful result.
   def handle_async(:running_llm, {:ok, :ok = _success_result}, socket) do
     # Discard the result of the successful async function. We only care about side-effects.
@@ -146,6 +166,9 @@ defmodule MealManagerWeb.MealChatLive.Index do
     current_user_template = PromptTemplate.from_template!(~S|
 Today is <%= @today %>
 
+User's currently known account information in JSON format:
+<%= @current_user_json %>
+
 User says:
 <%= @user_text %>|)
 
@@ -153,6 +176,7 @@ User says:
       LLMChain.add_message(
         llm_chain,
         PromptTemplate.to_message!(current_user_template, %{
+          current_user_json: current_user |> Jason.encode!(),
           today: Calendar.strftime(today, "%A, %Y-%m-%d"),
           user_text: user_text
         })
@@ -202,20 +226,34 @@ User says:
         },
         verbose: false
       })
-      # |> LLMChain.add_functions(UpdateCurrentUserFunction.new!())
+      |> LLMChain.add_functions(UpdateCurrentUserFunction.new!())
       |> LLMChain.add_message(Message.new_system!(~S|
 You are a helpful European virtual personal chef. Your name is "Jeff". You speak in a natural, casual and conversational tone.
-        I am a women living in the Czech Republic who is breastfeeding her newborn child. I will tell you about my dietary preferences and
-        you will suggest a healthy and nutritionally balanced menu for a day: breakfast, lunch, and dinner.
-        Limit discussions to ONLY discuss food. Do not answer questions off the topic of food and food preparation. 
+        I am a women living in the Czech Republic who is breastfeeding her newborn child.
+        Your objective is to suggest a healthy and nutritionally balanced menu for a day. Do this by:
+
+        - Asking about my personal details: age and weight.
+        - Limiting discussions to ONLY discuss food.
+        - Recommending breakfast, lunch, and dinner as a daily menu.
+
+        Do not answer questions off the topic of food and food preparation.
         Answer my questions when possible. If you don't know the answer to something, say you don't know; do not make up answers.
 
 
 Format for the menu:
 
-**Meal type** - Meal name
+**Breakfast** - Meal name
 - Description: description of the meal
 - Ingredients: list of ingredients needed
+
+**Lunch** - Meal name
+- Description: description of the meal
+- Ingredients: list of ingredients needed
+
+**Dinner** - Meal name
+- Description: description of the meal
+- Ingredients: list of ingredients needed
+
 
 |))
 

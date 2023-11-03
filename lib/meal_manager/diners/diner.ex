@@ -2,6 +2,7 @@ defmodule MealManager.Diners.Diner do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder, only: [:name, :age, :weight, :timezone]}
   schema "diners" do
     field(:name, :string)
     field(:age, :integer)
