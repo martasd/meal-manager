@@ -29,7 +29,7 @@ defmodule MealManagerWeb.MealChatLive.Index do
           role: :assistant,
           hidden: false,
           content:
-            "Hello! I am Jeff the Chef and I'm your personal manager! How can I help you today?"
+            "Hello! I am Jeff the Chef and I'm your personal meal manager! How can I help you today?"
         }
       ])
       |> reset_chat_message_form()
